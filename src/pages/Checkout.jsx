@@ -22,13 +22,13 @@ const Checkout = () => {
     let baseUrl = ""
     
     // Price ke hisaab se .env se sahi link uthana
-    if (pkg.price === 99) baseUrl = import.meta.env.VITE_SUPERPROFILE_LINK_99
-    else if (pkg.price === 199) baseUrl = import.meta.env.VITE_SUPERPROFILE_LINK_199
-    else if (pkg.price === 499) baseUrl = import.meta.env.VITE_SUPERPROFILE_LINK_499
-    else if (pkg.price === 999) baseUrl = import.meta.env.VITE_SUPERPROFILE_LINK_999
-    else if (pkg.price === 1999) baseUrl = import.meta.env.VITE_SUPERPROFILE_LINK_1999
-    else if (pkg.price === 4999) baseUrl = import.meta.env.VITE_SUPERPROFILE_LINK_4999
-
+        if (pkg.price === 99) baseUrl = "https://superprofile.bio/vp/premium-service-518";
+    else if (pkg.price === 199) baseUrl = "https://superprofile.bio/vp/random-private-video-call-157";
+    else if (pkg.price === 499) baseUrl = "https://superprofile.bio/vp/premium-service-980";
+    else if (pkg.price === 999) baseUrl = "https://superprofile.bio/vp/premium-service-978";
+    else if (pkg.price === 1999) baseUrl = "https://superprofile.bio/vp/premium-service-244";
+    else if (pkg.price === 4999) baseUrl = "https://superprofile.bio/vp/premium-service-390";
+    
     if (!baseUrl || baseUrl === "") {
       toast.error("Payment link setup bacha hai.")
       return
@@ -84,3 +84,4 @@ const Checkout = () => {
   )
 }
 export default Checkout
+
