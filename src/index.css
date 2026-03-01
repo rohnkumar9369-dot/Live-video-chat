@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Strict No-Scroll & Mobile-First Design */
+html, body {
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-touch-callout: none; /* Safari/iOS user selection disable karna */
+  -webkit-user-select: none;
+  user-select: none; 
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Faltu scrollbars ko hide karna */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
