@@ -4,8 +4,8 @@ import { generateZegoToken } from '../utils/zegoToken'
 import { db } from '../firebase'
 import { collection, addDoc, deleteDoc, query, where, onSnapshot, getDocs, doc, getDoc, serverTimestamp } from 'firebase/firestore'
 
-const APP_ID = Number(import.meta.env.VITE_ZEGO_APP_ID || 0)
-const SERVER_SECRET = import.meta.env.VITE_ZEGO_SERVER_SECRET || ""
+const APP_ID = 381425641;
+const SERVER_SECRET = "083ef863b69002864505afb419273291";
 
 export const useZego = (user, filters, onDisconnect) => {
   const zgRef = useRef(null)
@@ -161,3 +161,4 @@ export const useZego = (user, filters, onDisconnect) => {
     cleanupCall
   }
 }
+
