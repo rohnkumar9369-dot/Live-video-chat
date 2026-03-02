@@ -24,24 +24,14 @@ const Call = () => {
   const [streamId] = useState(`stream_${user?.uid}_${Date.now()}`)
   const [roomId] = useState(`room_random_123`)
 
-  useEffect(() => {
-    if (!user) { navigate('/'); return; }
-    
-    const initZego = async () => {
-      try {
-        // 1. Zego Engine Connection
-        const serverUrl = "wss://webliveroom" + APP_ID + "-api.zego.im/ws";
-        zgRef.current = new ZegoExpressEngine(APP_ID, serverUrl);
-        
-        // 2. Token Generator
-        const token = generateZegoToken(APP_ID, SERVER_SECRET, user.uid);
-        if (!token) {
-          toast.error("Token generate nahi hua! crypto-js file check karein.");
-          return; // Back nahi bhejenge, yahin rokenge error dikhane ke liye
-        }
-
-        // 3. Login Room
-        await zgRef.current.loginRoom(roomId, token, { userID: user.uid, userName: user.displayName || 'User' }, { userUpdate: true });
+            // ... login ke baad, ab hum camera permission try karenge
+          try {
+            localStreamRef.current = await zgRef.current.createStream({ camera: { audio: true, video: true } });
+          } catch (camErr) {
+            toast.error("Browser mein Camera/Mic ki permission Allow kijiye!");
+            return; // Back nahi bhejenge, error dikhane ke liye yahin rokenge
+          }
+  
         
         // 4. Camera Permission aur Video start
         try {
@@ -180,6 +170,7 @@ const Call = () => {
 }
 export default Call
   
+
 
 
 
