@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { db, storage, auth } from '../firebase'
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, doc, setDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { updateProfile } from 'firebase/auth'
 import { Phone, MessageCircle, Edit2, LogOut, Video, Copy, Camera, User, X, Mail } from 'lucide-react'
@@ -195,3 +195,4 @@ const Dashboard = () => {
 }
 export default Dashboard
               
+
