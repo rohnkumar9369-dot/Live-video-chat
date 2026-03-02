@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { db, storage, auth } from '../firebase'
-import { collection, query, where, orderBy, onSnapshot, doc, setDoc } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, doc, setDoc, updateDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { updateProfile } from 'firebase/auth'
 import { Phone, MessageCircle, Edit2, LogOut, Video, Copy, Camera as CameraIcon, X, Mail, Users, Globe, MessageSquare } from 'lucide-react'
@@ -16,12 +16,13 @@ const Dashboard = () => {
   const [messages, setMessages] = useState([])
   const [editing, setEditing] = useState(false)
   
-  // LIVE NAME WALI STATE (Instant update ke liye)
   const [newName, setNewName] = useState('')
   const [displayName, setDisplayName] = useState('User') 
   
   const [uploading, setUploading] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  
+  // 100% FIX: Refresh hone par sabse pehle browser ki memory se photo nikalega taaki gayab na ho
   const [localPhoto, setLocalPhoto] = useState("https://via.placeholder.com/150")
 
   // Filters State
@@ -32,11 +33,19 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Page load hote hi Firebase se naam aur photo utha kar set karega (Strict Logic)
+    // Refresh hote hi turant purani save ki hui photo dikhane ka logic
+    const savedPhoto = localStorage.getItem(`photo_${user.uid}`);
+    if (savedPhoto) {
+      setLocalPhoto(savedPhoto);
+    } else if (user.photoURL) {
+      setLocalPhoto(user.photoURL);
+    }
+    
     const userDocRef = doc(db, 'users', user.uid);
     const unsubUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const userData = docSnap.data();
+        
         if (userData.name) {
           setDisplayName(userData.name);
           setNewName(userData.name);
@@ -45,24 +54,14 @@ const Dashboard = () => {
           setNewName(user.displayName || '');
         }
         
-        // Photo ka strict logic jo refresh par udne nahi dega
+        // Agar database mein photo hai toh set karo aur hamesha ke liye browser mein lock kar do
         if (userData.photo) {
           setLocalPhoto(userData.photo);
-        } else if (userData.photoURL) {
-          setLocalPhoto(userData.photoURL);
-        } else if (user.photoURL) {
-          setLocalPhoto(user.photoURL);
-        } else {
-          setLocalPhoto("https://via.placeholder.com/150");
+          localStorage.setItem(`photo_${user.uid}`, userData.photo);
         }
       } else {
         setDisplayName(user.displayName || 'User');
         setNewName(user.displayName || '');
-        if(user.photoURL) {
-          setLocalPhoto(user.photoURL);
-        } else {
-          setLocalPhoto("https://via.placeholder.com/150");
-        }
       }
     });
 
@@ -75,16 +74,12 @@ const Dashboard = () => {
     return () => { unsubUser(); unsubCalls(); unsubMsgs(); }
   }, [user])
 
-  // FIREBASE MEIN NAAM SAVE KARNE KA SAHI LOGIC
   const handleUpdate = async () => {
     if (!newName.trim()) return
     try {
-      // 1. Firebase Authentication mein update
       await updateProfile(auth.currentUser, { displayName: newName })
-      // 2. Firebase Firestore Database mein update
       await setDoc(doc(db, 'users', user.uid), { name: newName }, { merge: true })
       
-      // 3. Bina refresh kiye turant UI par naam badalna
       setDisplayName(newName) 
       setEditing(false)
       toast.success("Naam save ho gaya!")
@@ -96,23 +91,30 @@ const Dashboard = () => {
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    
     const objectUrl = URL.createObjectURL(file);
-    setLocalPhoto(objectUrl);
+    setLocalPhoto(objectUrl); // Screen par turant dikhane ke liye
     setUploading(true)
+    
     const toastId = toast.loading("Uploading photo...")
     try {
-      const imageRef = ref(storage, `avatars/${user.uid}_${Date.now()}`)
+      // Aapke purane original code ki tarah exact name rakha hai
+      const imageRef = ref(storage, `avatars/${user.uid}`)
       await uploadBytes(imageRef, file)
       const photoURL = await getDownloadURL(imageRef)
+      
       await updateProfile(auth.currentUser, { photoURL })
       
-      // Photo ko double security ke sath save kiya hai taaki ud na jaye
-      await setDoc(doc(db, 'users', user.uid), { photo: photoURL, photoURL: photoURL }, { merge: true })
+      // Firebase mein strict tarike se save
+      await setDoc(doc(db, 'users', user.uid), { photo: photoURL }, { merge: true })
+      
+      // 100% FIX: Refresh se bachane ke liye photo browser memory mein lock kar di
+      localStorage.setItem(`photo_${user.uid}`, photoURL);
+      setLocalPhoto(photoURL);
       
       toast.success("Photo updated successfully!", { id: toastId })
     } catch (error) {
       toast.error("Failed to upload photo.", { id: toastId })
-      setLocalPhoto(user?.photoURL || "https://via.placeholder.com/150") 
     } finally {
       setUploading(false)
     }
@@ -136,7 +138,7 @@ const Dashboard = () => {
       {/* Main Content Layout */}
       <main className="flex-1 p-4 flex flex-col items-center overflow-y-auto pb-10">
         
-        {/* WELCOME NAME (Ab aapka save kiya hua naam yahan turant dikhega) */}
+        {/* WELCOME NAME */}
         <div className="w-full max-w-md mt-2 mb-4 px-2">
           <h1 className="text-2xl font-black text-gray-800">Welcome, {displayName}! 👋</h1>
           <p className="text-gray-500 text-sm">Find new friends around the world.</p>
@@ -257,7 +259,6 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between bg-white px-3 py-2 rounded-md border border-gray-200">
-                    {/* Yahan bhi save kiya hua naam turant dikhega */}
                     <h2 className="text-sm font-bold text-gray-800">{displayName}</h2>
                     <Edit2 size={14} className="text-gray-400 cursor-pointer hover:text-blue-600" onClick={() => setEditing(true)} />
                   </div>
@@ -297,4 +298,4 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-    
+                       
