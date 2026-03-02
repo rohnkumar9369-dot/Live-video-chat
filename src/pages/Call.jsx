@@ -74,11 +74,11 @@ const Call = () => {
 
         setLoading(false);
       } catch (error) {
-        console.error("Zego Error:", error);
-        toast.error("System Error: Server connect nahi hua.");
-        // Humne navigate('/dashboard') yahan se hata diya hai taaki screen back na bhage!
-      }
-    };
+              } catch (error) {
+        console.error("Zego Init Error:", error);
+        toast.error("Asli Error: " + error.message);
+    }
+    
 
     initZego();
     return () => { handleEndCall(false); };
@@ -182,3 +182,4 @@ const Call = () => {
 }
 export default Call
   
+
