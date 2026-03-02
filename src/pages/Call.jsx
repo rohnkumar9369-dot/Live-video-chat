@@ -24,31 +24,41 @@ const Call = () => {
   const [streamId] = useState(`stream_${user?.uid}_${Date.now()}`)
   const [roomId] = useState(`room_random_123`)
 
-            // ... login ke baad, ab hum camera permission try karenge
-          try {
-            localStreamRef.current = await zgRef.current.createStream({ camera: { audio: true, video: true } });
-          } catch (camErr) {
-            toast.error("Browser mein Camera/Mic ki permission Allow kijiye!");
-            return; // Back nahi bhejenge, error dikhane ke liye yahin rokenge
-          }
-  
+  useEffect(() => {
+    if (!user) { navigate('/'); return; }
+    
+    const initZego = async () => {
+      try {
+        // 1. Zego Engine Connection
+        const serverUrl = "wss://webliveroom" + APP_ID + "-api.zego.im/ws";
+        zgRef.current = new ZegoExpressEngine(APP_ID, serverUrl);
+        
+        // 2. Token Generator
+        const token = generateZegoToken(APP_ID, SERVER_SECRET, user.uid);
+        if (!token) {
+          toast.error("Token generate nahi hua! crypto-js file check karein.");
+          return;
+        }
+
+        // 3. Login Room
+        await zgRef.current.loginRoom(roomId, token, { userID: user.uid, userName: user.displayName || 'User' }, { userUpdate: true });
         
         // 4. Camera Permission aur Video start
         try {
           localStreamRef.current = await zgRef.current.createStream({ camera: { audio: true, video: true } });
         } catch (camErr) {
           toast.error("Browser mein Camera/Mic ki permission Allow kijiye!");
-          return; // Back nahi bhejenge, taaki user permission theek kar sake
+          return; 
         }
         
-        // 5. Local Video (Aapka Camera Niche) Play karna
+        // 5. Local Video Play karna
         const localView = document.getElementById('local-video');
         if (localView) zgRef.current.startPlayingStream(streamId, { videoView: localView });
         
         // 6. Stranger ke liye Publish karna
         await zgRef.current.startPublishingStream(streamId, localStreamRef.current);
 
-        // 7. Stranger (Upar wala Camera) ka wait karna
+        // 7. Stranger ka wait karna
         zgRef.current.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
           if (updateType === 'ADD') {
             const remoteStream = streamList[0];
@@ -64,10 +74,11 @@ const Call = () => {
 
         setLoading(false);
       } catch (error) {
-              } catch (error) {
         console.error("Zego Init Error:", error);
         toast.error("Asli Error: " + error.message);
-    }
+      }
+    };
+
     initZego();
     return () => { handleEndCall(false); };
   }, [user, streamId, roomId]);
@@ -131,7 +142,7 @@ const Call = () => {
         )}
       </div>
 
-      {/* BUTTONS: Chat, Mic, Camera, End Call */}
+      {/* BUTTONS */}
       <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center px-4">
         <div className="flex items-center gap-3 bg-gray-900/70 backdrop-blur-md p-3 rounded-full border border-gray-600/50 shadow-xl">
           <button onClick={toggleMic} className={`p-3 rounded-full transition ${micOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600'}`}>
@@ -149,7 +160,7 @@ const Call = () => {
         </div>
       </div>
 
-      {/* CHAT BOX (Hidden by default, Chat icon dabane par aayega) */}
+      {/* CHAT BOX */}
       {isChatOpen && (
         <div className="absolute bottom-24 left-4 right-4 h-64 bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
           <div className="bg-blue-600 p-3 flex justify-between items-center">
@@ -169,8 +180,4 @@ const Call = () => {
   )
 }
 export default Call
-  
-
-
-
-
+        
