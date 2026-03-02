@@ -6,7 +6,7 @@ import { db } from '../firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { PhoneOff, Camera, CameraOff, Mic, MicOff, Loader2, MessageSquare, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { generateZegoToken } from '../utils/zegoToken' // 🔴 Ye line missing thi jisse back ho raha tha
+import { generateZegoToken } from '../utils/zegoToken'
 
 const APP_ID = 381425641; 
 const SERVER_SECRET = "083ef863b69002864505afb419273291";
@@ -29,21 +29,36 @@ const Call = () => {
     
     const initZego = async () => {
       try {
-              const serverUrl = "wss://webliveroom" + APP_ID + "-api.zego.im/ws";
+        // 1. Zego Engine Connection
+        const serverUrl = "wss://webliveroom" + APP_ID + "-api.zego.im/ws";
         zgRef.current = new ZegoExpressEngine(APP_ID, serverUrl);
         
-        // 🔴 Token generate karna zaroori hai call connect karne ke liye
+        // 2. Token Generator
         const token = generateZegoToken(APP_ID, SERVER_SECRET, user.uid);
-        if (!token) throw new Error("Token generation failed");
+        if (!token) {
+          toast.error("Token generate nahi hua! crypto-js file check karein.");
+          return; // Back nahi bhejenge, yahin rokenge error dikhane ke liye
+        }
 
+        // 3. Login Room
         await zgRef.current.loginRoom(roomId, token, { userID: user.uid, userName: user.displayName || 'User' }, { userUpdate: true });
         
-        localStreamRef.current = await zgRef.current.createStream({ camera: { audio: true, video: true } });
+        // 4. Camera Permission aur Video start
+        try {
+          localStreamRef.current = await zgRef.current.createStream({ camera: { audio: true, video: true } });
+        } catch (camErr) {
+          toast.error("Browser mein Camera/Mic ki permission Allow kijiye!");
+          return; // Back nahi bhejenge, taaki user permission theek kar sake
+        }
         
+        // 5. Local Video (Aapka Camera Niche) Play karna
         const localView = document.getElementById('local-video');
         if (localView) zgRef.current.startPlayingStream(streamId, { videoView: localView });
+        
+        // 6. Stranger ke liye Publish karna
         await zgRef.current.startPublishingStream(streamId, localStreamRef.current);
 
+        // 7. Stranger (Upar wala Camera) ka wait karna
         zgRef.current.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
           if (updateType === 'ADD') {
             const remoteStream = streamList[0];
@@ -52,22 +67,22 @@ const Call = () => {
             setCallStarted(true);
             setLoading(false);
           } else if (updateType === 'DELETE') {
-            toast("Stranger disconnected.");
-            handleEndCall();
+            toast("Stranger cut the call.");
+            handleEndCall(false);
           }
         });
 
         setLoading(false);
       } catch (error) {
-        console.error("Zego Init Error:", error);
-        toast.error("Call connection failed. Please try again.");
-        navigate('/dashboard');
+        console.error("Zego Error:", error);
+        toast.error("System Error: Server connect nahi hua.");
+        // Humne navigate('/dashboard') yahan se hata diya hai taaki screen back na bhage!
       }
     };
 
     initZego();
     return () => { handleEndCall(false); };
-  }, [user, navigate, roomId, streamId]);
+  }, [user, streamId, roomId]);
 
   const handleEndCall = async (shouldNavigate = true) => {
     if (zgRef.current) {
@@ -108,7 +123,8 @@ const Call = () => {
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col m-0 p-0 overflow-hidden">
-      {/* Top Half: Stranger */}
+      
+      {/* UPAR WALA 50%: Stranger Camera */}
       <div id="remote-video" className="h-1/2 w-full bg-gray-900 border-b-2 border-black relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
@@ -118,7 +134,7 @@ const Call = () => {
         )}
       </div>
 
-      {/* Bottom Half: Local User */}
+      {/* NICHE WALA 50%: Aapka Local Camera */}
       <div id="local-video" className="h-1/2 w-full bg-gray-800 relative">
         {!cameraOn && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500">
@@ -127,7 +143,7 @@ const Call = () => {
         )}
       </div>
 
-      {/* Controls */}
+      {/* BUTTONS: Chat, Mic, Camera, End Call */}
       <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center px-4">
         <div className="flex items-center gap-3 bg-gray-900/70 backdrop-blur-md p-3 rounded-full border border-gray-600/50 shadow-xl">
           <button onClick={toggleMic} className={`p-3 rounded-full transition ${micOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600'}`}>
@@ -145,7 +161,7 @@ const Call = () => {
         </div>
       </div>
 
-      {/* Chat Overlay */}
+      {/* CHAT BOX (Hidden by default, Chat icon dabane par aayega) */}
       {isChatOpen && (
         <div className="absolute bottom-24 left-4 right-4 h-64 bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
           <div className="bg-blue-600 p-3 flex justify-between items-center">
@@ -165,5 +181,4 @@ const Call = () => {
   )
 }
 export default Call
-            
-
+  
