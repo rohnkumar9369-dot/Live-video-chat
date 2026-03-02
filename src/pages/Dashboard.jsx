@@ -15,7 +15,11 @@ const Dashboard = () => {
   const [calls, setCalls] = useState([])
   const [messages, setMessages] = useState([])
   const [editing, setEditing] = useState(false)
+  
+  // LIVE NAME WALI STATE (Instant update ke liye)
   const [newName, setNewName] = useState('')
+  const [displayName, setDisplayName] = useState('User') 
+  
   const [uploading, setUploading] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [localPhoto, setLocalPhoto] = useState("https://via.placeholder.com/150")
@@ -27,7 +31,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
+    
+    // Page load hote hi Firebase se naam utha kar set karega
     setNewName(user.displayName || '')
+    setDisplayName(user.displayName || 'User')
+    
     if(user.photoURL) setLocalPhoto(user.photoURL)
 
     const callsQuery = query(collection(db, 'calls'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'))
@@ -39,11 +47,17 @@ const Dashboard = () => {
     return () => { unsubCalls(); unsubMsgs(); }
   }, [user])
 
+  // FIREBASE MEIN NAAM SAVE KARNE KA SAHI LOGIC
   const handleUpdate = async () => {
     if (!newName.trim()) return
     try {
+      // 1. Firebase Authentication mein update
       await updateProfile(auth.currentUser, { displayName: newName })
+      // 2. Firebase Firestore Database mein update
       await setDoc(doc(db, 'users', user.uid), { name: newName }, { merge: true })
+      
+      // 3. Bina refresh kiye turant UI par naam badalna
+      setDisplayName(newName) 
       setEditing(false)
       toast.success("Naam save ho gaya!")
     } catch (error) {
@@ -73,9 +87,7 @@ const Dashboard = () => {
     }
   }
 
-  // Handle Video Call button with filters
   const startCall = () => {
-    // Navigate with filter state so Call.jsx can use them later if needed
     navigate('/call', { state: { gender, country, language } });
   }
 
@@ -93,16 +105,15 @@ const Dashboard = () => {
       {/* Main Content Layout */}
       <main className="flex-1 p-4 flex flex-col items-center overflow-y-auto pb-10">
         
-        {/* WELCOME NAME (Ab aapka naam yahan chamkega) */}
+        {/* WELCOME NAME (Ab aapka save kiya hua naam yahan turant dikhega) */}
         <div className="w-full max-w-md mt-2 mb-4 px-2">
-          <h1 className="text-2xl font-black text-gray-800">Welcome, {user?.displayName || 'User'}! 👋</h1>
+          <h1 className="text-2xl font-black text-gray-800">Welcome, {displayName}! 👋</h1>
           <p className="text-gray-500 text-sm">Find new friends around the world.</p>
         </div>
         
         {/* CENTER: Video Call & Filters */}
         <div className="w-full max-w-md bg-white p-6 rounded-3xl shadow-md border border-gray-100 mb-8">
           
-          {/* FILTERS SECTION */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1"><Users size={12}/> Gender</label>
@@ -215,12 +226,35 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between bg-white px-3 py-2 rounded-md border border-gray-200">
-                    <h2 className="text-sm font-bold text-gray-800">{user?.displayName || 'User'}</h2>
+                    {/* Yahan bhi save kiya hua naam turant dikhega */}
+                    <h2 className="text-sm font-bold text-gray-800">{displayName}</h2>
                     <Edit2 size={14} className="text-gray-400 cursor-pointer hover:text-blue-600" onClick={() => setEditing(true)} />
                   </div>
                 )}
               </div>
-              <button onClick={logout} className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 mb-5">
+
+              {/* EMAIL ID WALA DABBA */}
+              <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center gap-3">
+                 <Mail className="text-gray-400" size={18} />
+                 <div className="overflow-hidden">
+                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Email Address</p>
+                   <p className="text-xs font-medium text-gray-700 truncate">{user?.email}</p>
+                 </div>
+              </div>
+
+              {/* USER ID (UID) WALA DABBA */}
+              <div className="w-full bg-gray-50 p-3 rounded-xl flex justify-between items-center border border-gray-100">
+                <div className="overflow-hidden">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">User ID</p>
+                  <p className="text-xs font-mono text-gray-600 truncate">{user?.uid}</p>
+                </div>
+                <button onClick={() => { navigator.clipboard.writeText(user.uid); toast.success("Copied!"); }} className="p-2 hover:bg-white hover:shadow-md rounded-full transition text-gray-500 border border-transparent hover:border-gray-200">
+                  <Copy size={14} />
+                </button>
+              </div>
+
+              {/* LOGOUT BUTTON */}
+              <button onClick={logout} className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 mb-5 shadow-sm">
                 <LogOut size={16} /> Logout
               </button>
             </div>
@@ -232,4 +266,4 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-                       
+  
