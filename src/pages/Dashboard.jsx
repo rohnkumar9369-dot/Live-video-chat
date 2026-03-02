@@ -32,7 +32,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Yahi wo Naya Code hai jo refresh karne par Photo aur Naam wapas lata hai!
+    // Page load hote hi Firebase se naam aur photo utha kar set karega (Strict Logic)
     const userDocRef = doc(db, 'users', user.uid);
     const unsubUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -45,15 +45,24 @@ const Dashboard = () => {
           setNewName(user.displayName || '');
         }
         
+        // Photo ka strict logic jo refresh par udne nahi dega
         if (userData.photo) {
           setLocalPhoto(userData.photo);
+        } else if (userData.photoURL) {
+          setLocalPhoto(userData.photoURL);
         } else if (user.photoURL) {
           setLocalPhoto(user.photoURL);
+        } else {
+          setLocalPhoto("https://via.placeholder.com/150");
         }
       } else {
         setDisplayName(user.displayName || 'User');
         setNewName(user.displayName || '');
-        if(user.photoURL) setLocalPhoto(user.photoURL);
+        if(user.photoURL) {
+          setLocalPhoto(user.photoURL);
+        } else {
+          setLocalPhoto("https://via.placeholder.com/150");
+        }
       }
     });
 
@@ -96,7 +105,10 @@ const Dashboard = () => {
       await uploadBytes(imageRef, file)
       const photoURL = await getDownloadURL(imageRef)
       await updateProfile(auth.currentUser, { photoURL })
-      await setDoc(doc(db, 'users', user.uid), { photo: photoURL }, { merge: true })
+      
+      // Photo ko double security ke sath save kiya hai taaki ud na jaye
+      await setDoc(doc(db, 'users', user.uid), { photo: photoURL, photoURL: photoURL }, { merge: true })
+      
       toast.success("Photo updated successfully!", { id: toastId })
     } catch (error) {
       toast.error("Failed to upload photo.", { id: toastId })
@@ -285,4 +297,4 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-      
+    
