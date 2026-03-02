@@ -4,12 +4,13 @@ import { useAuth } from '../hooks/useAuth'
 import { ZegoExpressEngine } from 'zego-express-engine-webrtc'
 import { db } from '../firebase'
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore'
-import { PhoneOff, Camera, CameraOff, Mic, MicOff, Loader2, MessageSquare, X } from 'lucide-react'
+import { PhoneOff, Camera, CameraOff, Mic, MicOff, Loader2, SkipForward, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { generateZegoToken } from '../utils/zegoToken'
 
-const APP_ID = 381425641; 
-const SERVER_SECRET = "083ef863b69002864505afb419273291";
+// Aapka Naya Production App ID aur Secret
+const APP_ID = 1429635965; 
+const SERVER_SECRET = "842438ed108af59b61e47198b74ab8e5";
 
 const Call = () => {
   const { user } = useAuth()
@@ -20,9 +21,9 @@ const Call = () => {
   const [callStarted, setCallStarted] = useState(false)
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(true)
-  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [chatMessage, setChatMessage] = useState("")
   const [streamId] = useState(`stream_${user?.uid}_${Date.now()}`)
-  const [roomId] = useState(`room_random_123`)
+  const [roomId] = useState(`room_random_123`) 
 
   useEffect(() => {
     if (!user) return;
@@ -32,20 +33,20 @@ const Call = () => {
         const serverUrl = "wss://webliveroom" + APP_ID + "-api.zego.im/ws";
         zgRef.current = new ZegoExpressEngine(APP_ID, serverUrl);
         
+        // Auto-generating fresh token har call par
         const token = generateZegoToken(APP_ID, SERVER_SECRET, user.uid);
         if (!token) {
           toast.error("Token generate nahi hua!");
           return;
         }
 
-        // ZegoCloud par Login karna
         await zgRef.current.loginRoom(roomId, token, { userID: user.uid, userName: user.displayName || 'User' }, { userUpdate: true });
         
-        // --- COINS KATNE KA LOGIC (10 coins katenge call shuru hote hi) ---
+        // 10 Coins cut logic
         try {
           const userRef = doc(db, 'users', user.uid);
           await updateDoc(userRef, { coins: increment(-10) });
-          toast.success("Call connect hui! 10 Coins cut gaye.");
+          toast.success("Call connected! 10 Coins cut.");
         } catch (coinErr) {
           console.error("Coin Update Error:", coinErr);
         }
@@ -53,7 +54,7 @@ const Call = () => {
         try {
           localStreamRef.current = await zgRef.current.createStream({ camera: { audio: true, video: true } });
         } catch (camErr) {
-          toast.error("Browser mein Camera permission Allow kijiye!");
+          toast.error("Camera/Mic permission Allow kijiye!");
           return; 
         }
         
@@ -70,16 +71,15 @@ const Call = () => {
             setCallStarted(true);
             setLoading(false);
           } else if (updateType === 'DELETE') {
-            toast("Stranger cut the call.");
-            handleEndCall(false);
+            toast("Stranger disconnected. Finding next...");
+            handleNext();
           }
         });
 
         setLoading(false);
       } catch (error) {
         console.error("Zego Init Error:", error);
-        // Ab undefined nahi aayega, asli detail aayegi
-        toast.error("Zego Error: " + JSON.stringify(error));
+        toast.error("Error: " + JSON.stringify(error));
       }
     };
 
@@ -98,6 +98,12 @@ const Call = () => {
     if (shouldNavigate) navigate('/dashboard');
   };
 
+  const handleNext = async () => {
+    setLoading(true);
+    await handleEndCall(false); 
+    window.location.reload(); 
+  };
+
   const toggleMic = async () => {
     if (localStreamRef.current) {
       const newState = !micOn;
@@ -114,8 +120,16 @@ const Call = () => {
     }
   };
 
+  const sendChatMessage = () => {
+    if(chatMessage.trim() === "") return;
+    toast.success("Message sent: " + chatMessage);
+    setChatMessage("");
+  };
+
   return (
     <div className="fixed inset-0 bg-black flex flex-col m-0 p-0 overflow-hidden">
+      
+      {/* UPAR WALA 50%: Stranger Camera */}
       <div id="remote-video" className="h-1/2 w-full bg-gray-900 border-b-2 border-black relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
@@ -125,6 +139,7 @@ const Call = () => {
         )}
       </div>
 
+      {/* NICHE WALA 50%: Aapka Local Camera */}
       <div id="local-video" className="h-1/2 w-full bg-gray-800 relative">
         {!cameraOn && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500">
@@ -133,41 +148,53 @@ const Call = () => {
         )}
       </div>
 
-      <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center px-4">
-        <div className="flex items-center gap-3 bg-gray-900/70 backdrop-blur-md p-3 rounded-full border border-gray-600/50 shadow-xl">
-          <button onClick={toggleMic} className={`p-3 rounded-full transition ${micOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600'}`}>
-            {micOn ? <Mic className="text-white" size={20} /> : <MicOff className="text-white" size={20} />}
-          </button>
-          <button onClick={toggleCamera} className={`p-3 rounded-full transition ${cameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600'}`}>
-            {cameraOn ? <Camera className="text-white" size={20} /> : <CameraOff className="text-white" size={20} />}
-          </button>
-          <button onClick={() => setIsChatOpen(!isChatOpen)} className="p-3 rounded-full bg-blue-600 hover:bg-blue-700 transition">
-            <MessageSquare className="text-white" size={20} />
-          </button>
-          <button onClick={() => handleEndCall()} className="p-3 rounded-full bg-red-600 hover:bg-red-700 transition">
-            <PhoneOff className="text-white" size={20} />
+      {/* CHAT WALI LAMBI PATTI (Buttons ke upar) */}
+      <div className="absolute bottom-24 left-4 right-4 md:left-1/4 md:right-1/4 z-50">
+        <div className="bg-white/90 backdrop-blur-md rounded-full p-1.5 flex items-center shadow-xl border border-gray-200">
+          <input 
+            type="text" 
+            value={chatMessage}
+            onChange={(e) => setChatMessage(e.target.value)}
+            placeholder="Type message..." 
+            className="flex-1 bg-transparent px-4 py-2 text-black text-sm outline-none placeholder-gray-600 font-medium" 
+          />
+          <button onClick={sendChatMessage} className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-full transition">
+            <Send size={18} />
           </button>
         </div>
       </div>
 
-      {isChatOpen && (
-        <div className="absolute bottom-24 left-4 right-4 h-64 bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
-          <div className="bg-blue-600 p-3 flex justify-between items-center">
-            <h3 className="text-white font-bold text-sm">Live Chat</h3>
-            <button onClick={() => setIsChatOpen(false)} className="text-white hover:text-gray-200"><X size={18} /></button>
-          </div>
-          <div className="flex-1 bg-gray-50 p-2 overflow-y-auto">
-            <p className="text-xs text-center text-gray-400 mt-2">Chat started...</p>
-          </div>
-          <div className="p-2 bg-white border-t flex gap-2">
-            <input type="text" placeholder="Type a message..." className="flex-1 border rounded-full px-3 py-1 text-sm outline-none" />
-            <button className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Send</button>
-          </div>
+      {/* CONTROL BUTTONS (Mic, Camera, Next, Stop) */}
+      <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center px-4">
+        <div className="flex items-center gap-3 md:gap-5 bg-gray-900/80 backdrop-blur-md p-3 px-6 rounded-full border border-gray-600/50 shadow-2xl">
+          
+          {/* Mic */}
+          <button onClick={toggleMic} className={`p-3 rounded-full transition ${micOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600'}`}>
+            {micOn ? <Mic className="text-white" size={20} /> : <MicOff className="text-white" size={20} />}
+          </button>
+          
+          {/* Camera */}
+          <button onClick={toggleCamera} className={`p-3 rounded-full transition ${cameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600'}`}>
+            {cameraOn ? <Camera className="text-white" size={20} /> : <CameraOff className="text-white" size={20} />}
+          </button>
+          
+          {/* Next Button */}
+          <button onClick={handleNext} className="p-3 px-6 rounded-full bg-blue-500 hover:bg-blue-600 transition flex items-center gap-2 shadow-lg">
+            <span className="text-white font-bold text-sm">Next</span>
+            <SkipForward className="text-white" size={18} />
+          </button>
+          
+          {/* Stop / End Call Button */}
+          <button onClick={() => handleEndCall(true)} className="p-3 px-6 rounded-full bg-red-600 hover:bg-red-700 transition flex items-center gap-2 shadow-lg">
+            <span className="text-white font-bold text-sm">Stop</span>
+            <PhoneOff className="text-white" size={18} />
+          </button>
+          
         </div>
-      )}
+      </div>
+
     </div>
   )
 }
 export default Call
       
-
