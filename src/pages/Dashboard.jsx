@@ -5,7 +5,7 @@ import { db, storage, auth } from '../firebase'
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { updateProfile } from 'firebase/auth'
-import { Phone, MessageCircle, Edit2, LogOut, Video, Copy, Camera, User, X } from 'lucide-react'
+import { Phone, MessageCircle, Edit2, LogOut, Video, Copy, Camera, User, X, Mail } from 'lucide-react'
 import CoinDisplay from '../components/CoinDisplay'
 import toast from 'react-hot-toast'
 
@@ -62,7 +62,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans relative">
       
-      {/* 🔴 Top Header: Coins Left, Profile Icon Right */}
+      {/* Header */}
       <header className="bg-white px-4 py-3 flex items-center justify-between shadow-sm border-b border-gray-100 z-10 sticky top-0">
         <CoinDisplay />
         <button onClick={() => setShowProfileModal(true)} className="w-10 h-10 rounded-full border-2 border-gray-200 overflow-hidden bg-gray-100 hover:border-blue-400 transition shadow-sm">
@@ -70,74 +70,77 @@ const Dashboard = () => {
         </button>
       </header>
 
-      {/* 🔴 Main Content */}
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-20">
-        <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      {/* Main Content Layout */}
+      <main className="flex-1 p-4 flex flex-col items-center overflow-y-auto pb-10">
+        
+        {/* CENTER: Start Video Call Button */}
+        <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-md border border-gray-100 text-center mt-6 mb-8">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Video className="text-blue-600" size={40} />
+          </div>
+          <h1 className="text-2xl font-black text-gray-800 mb-2">Connect Now</h1>
+          <p className="text-gray-500 text-sm mb-6">Start a random video call instantly</p>
+          <button onClick={() => navigate('/call')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 shadow-lg transform transition active:scale-95">
+            <span className="text-xl">Start Video Call</span>
+          </button>
+        </div>
+
+        {/* BOTTOM: Left Chat & Right Call History */}
+        <div className="w-full max-w-md grid grid-cols-2 gap-4">
           
-          {/* Main Video Call Button */}
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center">
-            <h1 className="text-2xl font-black text-gray-800 mb-2">Connect Now</h1>
-            <p className="text-gray-500 text-sm mb-6">Start a random video call instantly</p>
-            <button onClick={() => navigate('/call')} className="w-full md:max-w-md mx-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-lg transform transition active:scale-95">
-              <Video size={24} /> <span className="text-xl">Start Video Call</span>
-            </button>
-          </div>
-
-          {/* 🔴 History Grid (Left: Chat, Right: Call) */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Chat History */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col">
-              <div className="flex items-center gap-2 mb-4 border-b pb-2">
-                <MessageCircle className="text-green-500" size={18} />
-                <h2 className="font-bold text-gray-800 text-sm">Chats</h2>
-              </div>
-              <div className="space-y-3 overflow-y-auto max-h-60 pr-1">
-                {messages.length > 0 ? messages.map(msg => (
-                  <div key={msg.id} className="bg-gray-50 p-2 rounded-xl flex items-center gap-2 border border-gray-100">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-xs">M</div>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="font-bold text-gray-800 text-xs truncate">Message</p>
-                      <p className="text-[9px] text-gray-400 truncate">{msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
-                    </div>
-                  </div>
-                )) : <p className="text-center text-gray-400 text-xs py-4">No chats yet.</p>}
-              </div>
+          {/* Left: Chat History */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col h-64">
+            <div className="flex items-center gap-2 mb-3 border-b pb-2">
+              <MessageCircle className="text-green-500" size={18} />
+              <h2 className="font-bold text-gray-800 text-sm">Chats</h2>
             </div>
-
-            {/* Call History */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col">
-              <div className="flex items-center gap-2 mb-4 border-b pb-2">
-                <Phone className="text-blue-500" size={18} />
-                <h2 className="font-bold text-gray-800 text-sm">Calls</h2>
-              </div>
-              <div className="space-y-3 overflow-y-auto max-h-60 pr-1">
-                {calls.length > 0 ? calls.map(call => (
-                  <div key={call.id} className="bg-gray-50 p-2 rounded-xl flex items-center gap-2 border border-gray-100">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs">
-                      {call.strangerName ? call.strangerName[0].toUpperCase() : 'S'}
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="font-bold text-gray-800 text-xs truncate">{call.strangerName || 'Stranger'}</p>
-                      <p className="text-[9px] text-gray-400 truncate">{call.timestamp?.seconds ? new Date(call.timestamp.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
-                    </div>
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1">
+              {messages.length > 0 ? messages.map(msg => (
+                <div key={msg.id} className="bg-gray-50 p-2 rounded-xl flex items-center gap-2 border border-gray-100">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-xs">M</div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-bold text-gray-800 text-xs truncate">Message</p>
+                    <p className="text-[9px] text-gray-400 truncate">{msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
                   </div>
-                )) : <p className="text-center text-gray-400 text-xs py-4">No calls yet.</p>}
-              </div>
+                </div>
+              )) : <p className="text-center text-gray-400 text-xs py-4 mt-6">No chats yet.</p>}
             </div>
           </div>
+
+          {/* Right: Call History */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col h-64">
+            <div className="flex items-center gap-2 mb-3 border-b pb-2">
+              <Phone className="text-blue-500" size={18} />
+              <h2 className="font-bold text-gray-800 text-sm">Calls</h2>
+            </div>
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1">
+              {calls.length > 0 ? calls.map(call => (
+                <div key={call.id} className="bg-gray-50 p-2 rounded-xl flex items-center gap-2 border border-gray-100">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs">
+                    {call.strangerName ? call.strangerName[0].toUpperCase() : 'S'}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-bold text-gray-800 text-xs truncate">{call.strangerName || 'Stranger'}</p>
+                    <p className="text-[9px] text-gray-400 truncate">{call.timestamp?.seconds ? new Date(call.timestamp.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
+                  </div>
+                </div>
+              )) : <p className="text-center text-gray-400 text-xs py-4 mt-6">No calls yet.</p>}
+            </div>
+          </div>
+
         </div>
       </main>
 
-      {/* 🔴 Profile Modal (Hidden by default, opens on Icon click) */}
+      {/* 🔴 Profile Modal with GMAIL included */}
       {showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowProfileModal(false)}>
-          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowProfileModal(false)}>
+          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b pb-3 border-gray-100">
               <h2 className="text-xl font-black text-gray-800">My Profile</h2>
               <button onClick={() => setShowProfileModal(false)} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition"><X size={20} /></button>
             </div>
 
-            <div className="flex flex-col items-center gap-5">
+            <div className="flex flex-col items-center gap-4">
               <div className="relative">
                 <img src={user?.photoURL || "https://via.placeholder.com/150"} alt="Profile" className="w-24 h-24 rounded-full border-4 border-gray-50 object-cover shadow-sm" />
                 <label className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full text-white cursor-pointer shadow-md hover:bg-blue-700 transition">
@@ -159,6 +162,15 @@ const Dashboard = () => {
                     <Edit2 size={14} className="text-gray-400 cursor-pointer hover:text-blue-600" onClick={() => setEditing(true)} />
                   </div>
                 )}
+              </div>
+
+              {/* 🔴 Gmail Box */}
+              <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center gap-3">
+                <Mail className="text-gray-400" size={18} />
+                <div className="overflow-hidden">
+                  <p className="text-[9px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Email Address</p>
+                  <p className="text-xs font-medium text-gray-700 truncate">{user?.email}</p>
+                </div>
               </div>
               
               <div className="w-full bg-gray-50 p-3 rounded-xl flex justify-between items-center border border-gray-100">
@@ -182,4 +194,4 @@ const Dashboard = () => {
   )
 }
 export default Dashboard
-                    
+              
