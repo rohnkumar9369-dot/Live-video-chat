@@ -32,15 +32,20 @@ const Dashboard = () => {
     return () => { unsubCalls(); unsubMsgs(); }
   }, [user])
 
-  const handleUpdate = async () => {
+    const handleUpdate = async () => {
     if (!newName.trim()) return
     try {
       await updateProfile(auth.currentUser, { displayName: newName })
-      await updateDoc(doc(db, 'users', user.uid), { name: newName })
+      // Ye line naya folder banayegi agar nahi hoga, aur naam save karegi
+      await setDoc(doc(db, 'users', user.uid), { name: newName }, { merge: true })
       setEditing(false)
-      toast.success("Name updated successfully!")
-    } catch (error) { toast.error("Failed to update name.") }
-  }
+      toast.success("Naam save ho gaya! Refresh ho raha hai...")
+      setTimeout(() => window.location.reload(), 1000) // Taki update turant screen par dikhe
+    } catch (error) { 
+      console.error("Name update error:", error)
+      toast.error("Name update fail hua.") 
+    }
+    }
 
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0]
@@ -195,4 +200,5 @@ const Dashboard = () => {
 }
 export default Dashboard
               
+
 
