@@ -29,7 +29,8 @@ const Call = () => {
     
     const initZego = async () => {
       try {
-        zgRef.current = new ZegoExpressEngine(APP_ID, SERVER_SECRET);
+              const serverUrl = "wss://webliveroom" + APP_ID + "-api.zego.im/ws";
+        zgRef.current = new ZegoExpressEngine(APP_ID, serverUrl);
         
         // 🔴 Token generate karna zaroori hai call connect karne ke liye
         const token = generateZegoToken(APP_ID, SERVER_SECRET, user.uid);
@@ -165,3 +166,4 @@ const Call = () => {
 }
 export default Call
             
+
