@@ -32,11 +32,30 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Page load hote hi Firebase se naam utha kar set karega
-    setNewName(user.displayName || '')
-    setDisplayName(user.displayName || 'User')
-    
-    if(user.photoURL) setLocalPhoto(user.photoURL)
+    // Yahi wo Naya Code hai jo refresh karne par Photo aur Naam wapas lata hai!
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        if (userData.name) {
+          setDisplayName(userData.name);
+          setNewName(userData.name);
+        } else {
+          setDisplayName(user.displayName || 'User');
+          setNewName(user.displayName || '');
+        }
+        
+        if (userData.photo) {
+          setLocalPhoto(userData.photo);
+        } else if (user.photoURL) {
+          setLocalPhoto(user.photoURL);
+        }
+      } else {
+        setDisplayName(user.displayName || 'User');
+        setNewName(user.displayName || '');
+        if(user.photoURL) setLocalPhoto(user.photoURL);
+      }
+    });
 
     const callsQuery = query(collection(db, 'calls'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'))
     const unsubCalls = onSnapshot(callsQuery, (snap) => setCalls(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
@@ -44,7 +63,7 @@ const Dashboard = () => {
     const msgsQuery = query(collection(db, 'messages'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'))
     const unsubMsgs = onSnapshot(msgsQuery, (snap) => setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
 
-    return () => { unsubCalls(); unsubMsgs(); }
+    return () => { unsubUser(); unsubCalls(); unsubMsgs(); }
   }, [user])
 
   // FIREBASE MEIN NAAM SAVE KARNE KA SAHI LOGIC
@@ -266,4 +285,4 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-  
+      
