@@ -78,7 +78,6 @@ const Call = () => {
         console.error("Zego Init Error:", error);
         toast.error("Asli Error: " + error.message);
     }
-    
 
     initZego();
     return () => { handleEndCall(false); };
@@ -182,4 +181,5 @@ const Call = () => {
 }
 export default Call
   
+
 
