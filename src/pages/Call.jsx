@@ -24,8 +24,8 @@ const Call = () => {
   const [streamId] = useState(`stream_${user?.uid}_${Date.now()}`)
   const [roomId] = useState(`room_random_123`)
 
-  useEffect(() => {
-    if (!user) { navigate('/'); return; }
+    useEffect(() => {
+    if (!user) return;
     
     const initZego = async () => {
       try {
@@ -181,3 +181,4 @@ const Call = () => {
 }
 export default Call
         
+
